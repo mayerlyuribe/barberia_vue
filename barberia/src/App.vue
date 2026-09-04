@@ -156,10 +156,10 @@ const citaYaPaso = (cita) => {
               <input type="radio" value="Ramiro" name="barbero" v-model="formulario.atencion"> Ramiro
             </label>
             <label>
-              <input type="radio" value="mancito 1" name="barbero" v-model="formulario.atencion"> El bayan
+              <input type="radio" value="El brayan" name="barbero" v-model="formulario.atencion"> El bayan
             </label>
             <label>
-              <input type="radio" value="mancito 2" name="barbero" v-model="formulario.atencion"> El chamo
+              <input type="radio" value="El chamo " name="barbero" v-model="formulario.atencion"> El chamo
             </label>
           </div>
 

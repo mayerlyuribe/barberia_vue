@@ -393,6 +393,14 @@ input[type="radio"] {
 .card-acciones .material-symbols-outlined {
   font-size: 16px;
 }
+.pendiente-texto{
+  text-align: center;
+  color: var(--texto-suave);
+}
+.pendiente-texto span.material-symbols-outlined{
+  font-size: 16px;
+  color: var(--texto-suave);
+}
 
 .btn-editar {
   background: var(--papel);
