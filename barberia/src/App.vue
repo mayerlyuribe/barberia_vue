@@ -1,108 +1,182 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
+
+// precios por servicio (cámbialos por los reales cuando quieras)
+const precioServicios = {
+  'corte clásico': 15000,
+  'corte moderno': 18000,
+  'barba': 10000,
+  'cejas': 5000,
+  'tinte': 25000
+}
+
+// tiempo simulado de guardado (ms)
+const tiempoCarga = 1200
 
 const estadoModal = ref('cerrado')
 
-// 1. Array reactivo vinculado a localStorage de forma automática
-// Parámetros: ('nombre-de-la-clave', valor_inicial)
 const listaCitas = useLocalStorage('citas_barberia', [])
 
-// Objeto para controlar las entradas del formulario actual
-const formulario = ref({
+const indiceEditando = ref(null)
+const indiceAEliminar = ref(null)
+const mensajeError = ref('')
+
+const formularioVacio = () => ({
   nombre: '',
-  servicio: '',
+  servicio: [],
   atencion: '',
   fecha: '',
   hora: '',
   valor: 0,
   metodoPago: 'Efectivo',
-  estadoPago: 'pagado',
-  observaciones: ''
+  estadoPago: 'pagado'
 })
 
-// 2. Función para guardar la cita
-const guardarCita = () => {
-  // Al hacer push al ref de useLocalStorage, VueUse se encarga 
-  // automáticamente de serializar y actualizar el localStorage.
-  listaCitas.value.push({ ...formulario.value })
+const formulario = ref(formularioVacio())
 
-  estadoModal.value = 'confirmacion'
+watch(
+  () => formulario.value.servicio,
+  (serviciosSeleccionados) => {
+    formulario.value.valor = serviciosSeleccionados.reduce(
+      (total, servicio) => total + (precioServicios[servicio] || 0),
+      0
+    )
+  },
+  { deep: true }
+)
+
+const guardarCita = () => {
+  if (formulario.value.servicio.length === 0) {
+    mensajeError.value = 'Selecciona al menos un servicio'
+    estadoModal.value = 'error'
+    return
+  }
+
+  estadoModal.value = 'cargando'
+
+  setTimeout(() => {
+    if (indiceEditando.value !== null) {
+      // conserva calificación y observaciones ya existentes al editar
+      const citaPrevia = listaCitas.value[indiceEditando.value]
+      listaCitas.value[indiceEditando.value] = {
+        ...formulario.value,
+        calificacion: citaPrevia.calificacion || '',
+        observaciones: citaPrevia.observaciones || ''
+      }
+    } else {
+      listaCitas.value.push({ ...formulario.value, calificacion: '', observaciones: '' })
+    }
+
+    estadoModal.value = 'confirmacion'
+  }, tiempoCarga)
 }
 
-// 3. Limpiar formulario y cerrar modal
-const cerrarModal = () => {
-  formulario.value = {
-    nombre: '',
-    servicio: '',
-    atencion: '',
-    fecha: '',
-    hora: '',
-    valor: 0,
-    metodoPago: 'Efectivo',
-    estadoPago: 'pagado',
-    observaciones: ''
-  }
+const editarCita = (index) => {
+  formulario.value = { ...listaCitas.value[index], servicio: [...listaCitas.value[index].servicio] }
+  indiceEditando.value = index
+  estadoModal.value = 'formulario'
+}
+
+const eliminarCita = (index) => {
+  indiceAEliminar.value = index
+  estadoModal.value = 'confirmarEliminar'
+}
+
+const confirmarEliminacion = () => {
+  listaCitas.value.splice(indiceAEliminar.value, 1)
+  indiceAEliminar.value = null
   estadoModal.value = 'cerrado'
+}
+
+const cancelarEliminacion = () => {
+  indiceAEliminar.value = null
+  estadoModal.value = 'cerrado'
+}
+
+const cerrarModal = () => {
+  formulario.value = formularioVacio()
+  indiceEditando.value = null
+  estadoModal.value = 'cerrado'
+}
+
+const cerrarError = () => {
+  mensajeError.value = ''
+  estadoModal.value = 'formulario' // vuelve al formulario, conserva lo ya escrito
+}
+
+// calificación y observaciones se registran después de la cita, sobre la tarjeta
+const calificarCita = (index, estrellas) => {
+  listaCitas.value[index].calificacion = estrellas
+}
+
+const actualizarObservaciones = (index, texto) => {
+  listaCitas.value[index].observaciones = texto
+}
+
+const ahora = ref(new Date())
+
+setInterval(() => {
+  ahora.value = new Date()
+}, 60000)
+
+const citaYaPaso = (cita) => {
+  if (!cita.fecha || !cita.hora) return false
+  const fechaHoraCita = new Date(`${cita.fecha}T${cita.hora}`)
+  return fechaHoraCita <= ahora.value
 }
 </script>
 
-<template>
+<template class="cuerpo">
   <div class="contenedor">
-    <h1>Barbería Don Ramiro</h1>
-    <button v-on:click="estadoModal = 'formulario'">Agendar una cita</button>
+    <header>
+      <h1>Barbería Don Ramiro</h1>
+      <button v-on:click="estadoModal = 'formulario'">Agendar una cita <span class="material-symbols-outlined">add</span></button>
+    </header>
 
-    <!-- Modal Formulario -->
     <div v-if="estadoModal === 'formulario'" class="overlay">
       <div class="modal">
-        <h2>Información de la cita</h2>
-        
+        <h2>{{ indiceEditando !== null ? 'Editar cita' : 'Información de la cita' }}</h2>
+
         <form v-on:submit.prevent="guardarCita">
-          <!-- Nombre -->
           <label for="nombreCliente">Nombre del cliente: </label>
           <input type="text" v-model="formulario.nombre" id="nombreCliente" required />
 
-          <!-- Servicio -->
-          <label for="tipoServicio">Tipo de servicio:</label>
-          <select v-model="formulario.servicio" id="tipoServicio" required>
-            <option value="" disabled selected>Seleccione un servicio</option>
-            <option value="corte clásico">Corte clásico</option>
-            <option value="corte moderno">Corte Moderno</option>
-            <option value="barba">Barba</option>
-            <option value="cejas">Cejas</option>
-            <option value="tinte">Tinte</option>
-          </select>
+          <div class="grupo-servicios">
+            <p>Tipo de servicio:</p>
+            <label v-for="(precio, nombre) in precioServicios" :key="nombre">
+              <input type="checkbox" :value="nombre" v-model="formulario.servicio">
+              {{ nombre }} — ${{ precio.toLocaleString() }}
+            </label>
+          </div>
 
-          <!-- Atendido por -->
           <div>
-            <p>¿Quién te atendió a ti, ve?</p>
+            <p>Barbero</p>
             <label>
               <input type="radio" value="Ramiro" name="barbero" v-model="formulario.atencion"> Ramiro
             </label>
             <label>
-              <input type="radio" value="mancito 1" name="barbero" v-model="formulario.atencion"> Mancito 1
+              <input type="radio" value="mancito 1" name="barbero" v-model="formulario.atencion"> El bayan
             </label>
             <label>
-              <input type="radio" value="mancito 2" name="barbero" v-model="formulario.atencion"> Mancito 2
+              <input type="radio" value="mancito 2" name="barbero" v-model="formulario.atencion"> El chamo
             </label>
           </div>
 
-          <!-- Fecha y Hora -->
           <div>
-            <p>What moment pasó esto mi socio</p>
+            <p>Horario</p>
             <label for="fecha">Fecha: </label>
             <input type="date" id="fecha" v-model="formulario.fecha">
-            
+
             <label for="hora">Hora: </label>
             <input type="time" id="hora" v-model="formulario.hora">
           </div>
 
-          <!-- Pago -->
           <div>
-            <label for="valor">Valor del servicio: </label>
-            <input type="number" step="0.01" placeholder="0.00" id="valor" v-model.number="formulario.valor" />
+            <p for="valor">Valor del servicio: </p>
+            <input type="number" step="0.01" placeholder="0.00" id="valor" v-model.number="formulario.valor" readonly />
 
-            <div>
+            <div class="grup-pago">
               <p>Método de pago</p>
               <label>
                 <input type="radio" value="Efectivo" name="pago" v-model="formulario.metodoPago"> Efectivo
@@ -115,72 +189,121 @@ const cerrarModal = () => {
               </label>
             </div>
 
-            <label for="estadoPago">Estado de pago: </label>
+            <p for="estadoPago">Estado de pago: </p>
             <select v-model="formulario.estadoPago" id="estadoPago">
               <option value="pagado">Pagado</option>
               <option value="pendiente">Pendiente</option>
-              <option value="fiado">Fiado</option>
             </select>
           </div>
 
-          <!-- Observaciones -->
-          <label for="observaciones">Observaciones:</label>
-          <textarea 
-            id="observaciones" 
-            v-model="formulario.observaciones" 
-            placeholder="Describa sus observaciones..." 
-            rows="4" 
-            cols="50"
-          ></textarea>
-
           <div class="acciones">
-            <button type="submit">Registrar</button>
+            <button type="submit">{{ indiceEditando !== null ? 'Guardar cambios' : 'Registrar' }}</button>
             <button type="button" v-on:click="cerrarModal">Cancelar</button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- Modal Confirmación -->
+    <div v-else-if="estadoModal === 'cargando'" class="overlay">
+      <div class="modal modal-cargando">
+        <span class="material-symbols-outlined spinner">progress_activity</span>
+        <h2>Guardando cita</h2>
+        <p>Un momento, estamos registrando la información...</p>
+      </div>
+    </div>
+
+    <div v-else-if="estadoModal === 'error'" class="overlay">
+      <div class="modal modal-error">
+        <span class="material-symbols-outlined icono-alerta">error</span>
+        <h2>Ups, falta algo</h2>
+        <p>{{ mensajeError }}</p>
+
+        <div class="acciones">
+          <button type="button" v-on:click="cerrarError">Entendido</button>
+        </div>
+      </div>
+    </div>
+
     <div v-else-if="estadoModal === 'confirmacion'" class="overlay">
       <div class="modal">
         <h2>¡Cita Registrada!</h2>
         <p><strong>Cliente:</strong> {{ formulario.nombre }}</p>
-        <p><strong>Servicio:</strong> {{ formulario.servicio }}</p>
+        <p><strong>Servicio:</strong> {{ formulario.servicio.join(', ') }}</p>
         <p><strong>Atendido por:</strong> {{ formulario.atencion }}</p>
-        <p><strong>Total:</strong> ${{ formulario.valor }} ({{ formulario.metodoPago }})</p>
-        
+        <p><strong>Total:</strong> ${{ formulario.valor.toLocaleString() }} ({{ formulario.metodoPago }})</p>
+
         <div class="acciones">
           <button v-on:click="cerrarModal">Finalizar</button>
         </div>
       </div>
     </div>
 
-    <!-- Citas Guardadas persistentes -->
+    <div v-else-if="estadoModal === 'confirmarEliminar'" class="overlay">
+      <div class="modal modal-confirmar">
+        <span class="material-symbols-outlined icono-alerta">warning</span>
+        <h2>¿Eliminar esta cita?</h2>
+        <p v-if="indiceAEliminar !== null">
+          Se eliminará la cita de <strong>{{ listaCitas[indiceAEliminar].nombre }}</strong>. Esta acción no se puede
+          deshacer.
+        </p>
+
+        <div class="acciones">
+          <button type="button" class="btn-eliminar-modal" v-on:click="confirmarEliminacion">Sí, eliminar</button>
+          <button type="button" v-on:click="cancelarEliminacion">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
     <div class="historial" v-if="listaCitas.length > 0">
-      <h2>Citas Almacenadas en LocalStorage ({{ listaCitas.length }})</h2>
-      <ul>
-        <li v-for="(cita, index) in listaCitas" :key="index">
-          <strong>{{ cita.nombre }}</strong> - {{ cita.servicio }} | Barber: {{ cita.atencion }} | Total: ${{ cita.valor }}
-        </li>
-      </ul>
+      <p>Clientes guardados ({{ listaCitas.length }})</p>
+      <div class="tarjetas">
+        <div class="card" v-for="(cita, index) in listaCitas" :key="index">
+          <div class="card-header">
+            <h3>{{ cita.nombre }}</h3>
+            <span class="badge" :class="cita.estadoPago">{{ cita.estadoPago }}</span>
+          </div>
+
+          <div class="servicios-chips">
+            <span class="chip" v-for="s in cita.servicio" :key="s">{{ s }}</span>
+          </div>
+
+          <div class="card-info">
+            <p><span class="material-symbols-outlined">content_cut</span> {{ cita.atencion }}</p>
+            <p><span class="material-symbols-outlined">calendar_month</span> {{ cita.fecha }} · {{ cita.hora }}</p>
+            <p><span class="material-symbols-outlined">payments</span> ${{ cita.valor.toLocaleString() }} · {{
+              cita.metodoPago }}</p>
+          </div>
+          <template v-if="citaYaPaso(cita)">
+            <div class="calificacion">
+              <span v-for="n in 5" :key="n" class="material-symbols-outlined estrella"
+                :class="{ activa: n <= (cita.calificacion || 0) }" v-on:click="calificarCita(index, n)">
+                star
+              </span>
+              <span v-if="!cita.calificacion" class="sin-calificar-texto">Sin calificar aún</span>
+            </div>
+
+            <textarea class="observaciones-input" placeholder="Agregar observación después del servicio..." rows="2"
+              :value="cita.observaciones" v-on:change="actualizarObservaciones(index, $event.target.value)"></textarea>
+          </template>
+
+          <p v-else class="pendiente-texto">
+            <span class="material-symbols-outlined">schedule</span>
+            Disponible para calificar después de {{ cita.fecha }} {{ cita.hora }}
+          </p>
+          <div class="card-acciones">
+            <button type="button" class="btn-editar" v-on:click="editarCita(index)">
+              <span class="material-symbols-outlined">edit</span> Editar
+            </button>
+            <button type="button" class="btn-eliminar" v-on:click="eliminarCita(index)">
+              <span class="material-symbols-outlined">delete</span> Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.contenedor { padding: 20px; font-family: sans-serif; }
-.overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex; justify-content: center; align-items: center; z-index: 1000;
-}
-.modal {
-  background: white; padding: 25px; border-radius: 8px; color: #333;
-  min-width: 320px; max-height: 90vh; overflow-y: auto;
-}
-form { display: flex; flex-direction: column; gap: 10px; }
-.acciones { margin-top: 15px; display: flex; gap: 10px; }
-.historial { margin-top: 30px; border-top: 2px solid #ccc; padding-top: 15px; }
+
 </style>

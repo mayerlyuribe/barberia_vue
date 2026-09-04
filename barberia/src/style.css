@@ -1,0 +1,473 @@
+@import url('https://fonts.googleapis.com/css2?family=Faustina:ital,wght@0,300..800;1,300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --tinta: #1c1a17;
+  --papel: #f4f1e6;
+  --carmesi: #9c3d3d;
+  --laton: #b8935f;
+  --texto: #2b2620;
+  --texto-suave: #6b6255;
+  --linea: #e2dbc8;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+p{
+  font-size: 1rem;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.contenedor {
+  background-color: var(--papel);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  padding-bottom: 60px;
+  font-family: 'Work Sans', sans-serif;
+  color: var(--texto);
+}
+
+header {
+  background: var(--tinta);
+  color: var(--papel);
+  padding: 40px 24px;
+  display: grid;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  gap: 10px;
+  border-bottom: 3px solid var(--carmesi);
+}
+
+header .material-symbols-outlined {
+  font-size: 30px;
+  color: var(--laton);
+}
+
+header h1 {
+  font-family: 'Faustina', serif;
+  font-weight: 600;
+  font-size: 2rem;
+  text-align: center;
+}
+
+header button {
+  margin-top: 8px;
+  background: var(--laton);
+  color: var(--tinta);
+  border: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 12px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button span.material-symbols-outlined {
+  font-size: 18px;
+  vertical-align: middle;
+  color: var(--tinta);
+}
+header button:hover {
+  opacity: 0.85;
+}
+
+/* ---------- MODAL / OVERLAY ---------- */
+.overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: rgba(20, 17, 14, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  padding: 28px;
+  border-radius: 6px;
+  color: var(--texto);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal h2 {
+  font-family: 'Faustina', serif;
+  font-size: 1.35rem;
+  margin-bottom: 16px;
+  color: var(--tinta);
+}
+
+/* ---------- FORM ---------- */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  gap:20px;
+
+}
+
+form label,
+form p {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  padding: 5px 0;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+select,
+textarea {
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.95rem;
+  padding: 10px 12px;
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  background: white;
+  color: var(--texto);
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--laton);
+}
+
+input[readonly] {
+  background: var(--papel);
+  font-weight: 600;
+}
+
+.grupo-servicios {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grupo-servicios label,
+form div label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--texto);
+  cursor: pointer;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--carmesi);
+  width: 16px;
+  height: 16px;
+}
+
+.acciones {
+  margin-top: 6px;
+  display: flex;
+  gap: 10px;
+}
+
+.acciones button {
+  flex: 1;
+  padding: 11px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.acciones button[type="submit"] {
+  background: var(--carmesi);
+  color: white;
+}
+
+.acciones button[type="button"] {
+  background: var(--papel);
+  color: var(--texto);
+  border: 1px solid var(--linea);
+}
+
+.acciones button:hover {
+  opacity: 0.85;
+}
+.grup-pago{
+  padding: 10px 0;
+}
+
+/* ---------- CONFIRMAR ELIMINAR ---------- */
+.modal-confirmar {
+  text-align: center;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.icono-alerta {
+  font-size: 34px;
+  color: var(--carmesi);
+}
+
+.modal-confirmar p {
+  color: var(--texto-suave);
+  font-weight: 400;
+}
+
+.modal-confirmar .acciones {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.btn-eliminar-modal {
+  background: var(--carmesi);
+  color: white;
+}
+
+/* ---------- HISTORIAL / CARDS ---------- */
+.historial {
+  margin-top: 36px;
+  padding: 0 24px;
+}
+
+.historial > p {
+  font-family: 'Faustina', serif;
+  font-size: 1.15rem;
+  color: var(--tinta);
+  margin-bottom: 16px;
+}
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--linea);
+  border-radius: 20px;
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.card-header h3 {
+  font-family: 'Faustina', serif;
+  font-size: 1.1rem;
+  color: var(--tinta);
+}
+
+.badge {
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge.pagado {
+  background: #e0ebe1;
+  color: #2f6b3a;
+}
+
+.badge.pendiente {
+  background: #f5e2d3;
+  color: #9c5b1f;
+}
+
+.servicios-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  background: var(--papel);
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.85rem;
+  border-top: 1px solid var(--linea);
+  padding-top: 10px;
+}
+
+.card-info p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.card-info .material-symbols-outlined {
+  font-size: 17px;
+  color: var(--laton);
+}
+
+.calificacion {
+  display: flex;
+  gap: 2px;
+}
+
+.estrella {
+  font-size: 18px;
+  color: var(--linea);
+  font-variation-settings: 'FILL' 0;
+}
+
+.estrella.activa {
+  color: var(--laton);
+  font-variation-settings: 'FILL' 1;
+}
+
+.sin-calificar {
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  font-style: italic;
+}
+
+.observaciones {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  font-style: italic;
+}
+
+.card-acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.card-acciones button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.card-acciones button:hover {
+  opacity: 0.85;
+}
+
+.card-acciones .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.btn-editar {
+  background: var(--papel);
+  color: var(--texto);
+  border: 1px solid var(--linea) !important;
+}
+
+.btn-eliminar {
+  background: var(--papel);
+  color: var(--carmesi);
+  border: 1px solid var(--carmesi) !important;
+}
+.modal-cargando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 40px 32px;
+}
+
+.spinner {
+  font-size: 56px;
+  color: #ffd978;
+  animation: girar 1s linear infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes girar {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.modal-cargando h2 {
+  margin: 0;
+}
+
+.modal-cargando p {
+  color: #6b7280;
+  margin: 0;
+}
+
+.modal-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 32px;
+}
+
+.modal-error .icono-alerta {
+  font-size: 48px;
+  color: #dc2626;
+}
+
+@media (max-width: 480px) {
+  header {
+    padding: 32px 16px;
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+  }
+
+  .historial {
+    padding: 0 16px;
+  }
+
+  .tarjetas {
+    grid-template-columns: 1fr;
+  }
+}
