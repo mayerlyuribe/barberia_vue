@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 
 // precios por servicio (cámbialos por los reales cuando quieras)
@@ -35,16 +35,13 @@ const formularioVacio = () => ({
 
 const formulario = ref(formularioVacio())
 
-watch(
-  () => formulario.value.servicio,
-  (serviciosSeleccionados) => {
-    formulario.value.valor = serviciosSeleccionados.reduce(
-      (total, servicio) => total + (precioServicios[servicio] || 0),
-      0
-    )
-  },
-  { deep: true }
-)
+// reemplaza al watch: se llama manualmente cada vez que cambia un checkbox de servicio
+const actualizarValor = () => {
+  formulario.value.valor = formulario.value.servicio.reduce(
+    (total, servicio) => total + (precioServicios[servicio] || 0),
+    0
+  )
+}
 
 const guardarCita = () => {
   if (formulario.value.servicio.length === 0) {
@@ -145,7 +142,12 @@ const citaYaPaso = (cita) => {
           <div class="grupo-servicios">
             <p>Tipo de servicio:</p>
             <label v-for="(precio, nombre) in precioServicios" :key="nombre">
-              <input type="checkbox" :value="nombre" v-model="formulario.servicio">
+              <input
+                type="checkbox"
+                :value="nombre"
+                v-model="formulario.servicio"
+                v-on:change="actualizarValor"
+              >
               {{ nombre }} — ${{ precio.toLocaleString() }}
             </label>
           </div>
@@ -159,7 +161,7 @@ const citaYaPaso = (cita) => {
               <input type="radio" value="El brayan" name="barbero" v-model="formulario.atencion"> El bayan
             </label>
             <label>
-              <input type="radio" value="El chamo " name="barbero" v-model="formulario.atencion"> El chamo
+              <input type="radio" value="El chamo" name="barbero" v-model="formulario.atencion"> El chamo
             </label>
           </div>
 
