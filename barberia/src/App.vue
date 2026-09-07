@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 
 // precios por servicio (cámbialos por los reales cuando quieras)
@@ -11,7 +11,6 @@ const precioServicios = {
   'tinte': 25000
 }
 
-// tiempo simulado de guardado (ms)
 const tiempoCarga = 1200
 
 const estadoModal = ref('cerrado')
@@ -35,6 +34,13 @@ const formularioVacio = () => ({
 
 const formulario = ref(formularioVacio())
 
+// fecha máxima seleccionable en el input de fecha: hoy + 1 mes
+const fechaMaximaPermitida = computed(() => {
+  const fecha = new Date()
+  fecha.setMonth(fecha.getMonth() + 1)
+  return fecha.toISOString().split('T')[0]
+})
+
 // reemplaza al watch: se llama manualmente cada vez que cambia un checkbox de servicio
 const actualizarValor = () => {
   formulario.value.valor = formulario.value.servicio.reduce(
@@ -43,12 +49,72 @@ const actualizarValor = () => {
   )
 }
 
+const mostrarError = (mensaje) => {
+  mensajeError.value = mensaje
+  estadoModal.value = 'error'
+}
+
 const guardarCita = () => {
-  if (formulario.value.servicio.length === 0) {
-    mensajeError.value = 'Selecciona al menos un servicio'
-    estadoModal.value = 'error'
+  // el nombre no puede quedar vacío ni ser solo espacios en blanco
+  const nombreLimpio = formulario.value.nombre.trim()
+  if (!nombreLimpio) {
+    mostrarError('El nombre no puede estar vacío ni contener solo espacios')
     return
   }
+
+  if (formulario.value.servicio.length === 0) {
+    mostrarError('Selecciona al menos un servicio')
+    return
+  }
+
+  // quién atiende ahora es obligatorio
+  if (!formulario.value.atencion) {
+    mostrarError('Selecciona quién va a atender la cita')
+    return
+  }
+
+  if (!formulario.value.fecha) {
+    mostrarError('Selecciona una fecha para la cita')
+    return
+  }
+
+  if (!formulario.value.hora) {
+    mostrarError('Selecciona una hora para la cita')
+    return
+  }
+
+  const fechaHoraCita = new Date(`${formulario.value.fecha}T${formulario.value.hora}`)
+  if (isNaN(fechaHoraCita.getTime())) {
+    mostrarError('La fecha u hora ingresada no es válida')
+    return
+  }
+
+  // al crear una cita nueva no debería poder agendarse en el pasado
+  // (al editar sí se permite, por si solo se está corrigiendo un dato de una cita ya pasada)
+  if (indiceEditando.value === null && fechaHoraCita < new Date()) {
+    mostrarError('No puedes agendar una cita en una fecha u hora que ya pasó')
+    return
+  }
+
+  // no se aceptan citas con más de un mes de anticipación desde hoy, el día que se está registrando
+  const fechaMaxima = new Date()
+  fechaMaxima.setMonth(fechaMaxima.getMonth() + 1)
+  if (fechaHoraCita > fechaMaxima) {
+    mostrarError('No se pueden agendar citas con más de un mes de anticipación')
+    return
+  }
+
+  // horario de atención: de 8:00 am a 7:00 pm
+  const [horaCita, minutoCita] = formulario.value.hora.split(':').map(Number)
+  const minutosDesdeMedianoche = horaCita * 60 + minutoCita
+  const horaMinima = 8 * 60 // 8:00 am
+  const horaMaxima = 19 * 60 // 7:00 pm
+  if (minutosDesdeMedianoche < horaMinima || minutosDesdeMedianoche > horaMaxima) {
+    mostrarError('El horario de atención es de 8:00 am a 7:00 pm')
+    return
+  }
+
+  formulario.value.nombre = nombreLimpio
 
   estadoModal.value = 'cargando'
 
@@ -158,7 +224,7 @@ const citaYaPaso = (cita) => {
               <input type="radio" value="Ramiro" name="barbero" v-model="formulario.atencion"> Ramiro
             </label>
             <label>
-              <input type="radio" value="El brayan" name="barbero" v-model="formulario.atencion"> El bayan
+              <input type="radio" value="El brayan" name="barbero" v-model="formulario.atencion"> El brayan
             </label>
             <label>
               <input type="radio" value="El chamo" name="barbero" v-model="formulario.atencion"> El chamo
@@ -168,10 +234,10 @@ const citaYaPaso = (cita) => {
           <div>
             <p>Horario</p>
             <label for="fecha">Fecha: </label>
-            <input type="date" id="fecha" v-model="formulario.fecha">
+            <input type="date" id="fecha" v-model="formulario.fecha" :max="fechaMaximaPermitida">
 
             <label for="hora">Hora: </label>
-            <input type="time" id="hora" v-model="formulario.hora">
+            <input type="time" id="hora" v-model="formulario.hora" min="08:00" max="19:00">
           </div>
 
           <div>
