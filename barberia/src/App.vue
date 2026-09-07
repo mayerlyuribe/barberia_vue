@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 
 // precios por servicio (cámbialos por los reales cuando quieras)
@@ -38,15 +38,16 @@ const formularioVacio = () => ({
 
 const formulario = ref(formularioVacio())
 
-// fecha máxima seleccionable en el input de fecha: hoy + 1 mes
-const fechaMaximaPermitida = computed(() => {
-  const fecha = new Date()
-  fecha.setMonth(fecha.getMonth() + 1)
-  return fecha.toISOString().split('T')[0]
-})
+// estos dos servicios no se pueden elegir juntos (es uno o el otro)
+const serviciosExcluyentes = ['corte clásico', 'corte moderno']
 
 // reemplaza al watch: se llama manualmente cada vez que cambia un checkbox de servicio
-const actualizarValor = () => {
+const actualizarValor = (servicioMarcado) => {
+  if (serviciosExcluyentes.includes(servicioMarcado) && formulario.value.servicio.includes(servicioMarcado)) {
+    const opuesto = serviciosExcluyentes.find((s) => s !== servicioMarcado)
+    formulario.value.servicio = formulario.value.servicio.filter((s) => s !== opuesto)
+  }
+
   formulario.value.valor = formulario.value.servicio.reduce(
     (total, servicio) => total + (precioServicios[servicio] || 0),
     0
@@ -223,6 +224,8 @@ const cerrarError = () => {
 
 // calificación y observaciones se registran después de la cita, sobre la tarjeta
 const calificarCita = (index, estrellas) => {
+  // si ya tiene calificación, queda fija: no se puede volver a calificar
+  if (listaCitas.value[index].calificacion) return
   listaCitas.value[index].calificacion = estrellas
 }
 
@@ -256,7 +259,7 @@ const citaYaPaso = (cita) => {
 
         <form v-on:submit.prevent="guardarCita">
           <label for="nombreCliente">Nombre del cliente: </label>
-          <input type="text" v-model="formulario.nombre" id="nombreCliente" required />
+          <input type="text" v-model="formulario.nombre" id="nombreCliente" />
 
           <div class="grupo-servicios">
             <p>Tipo de servicio:</p>
@@ -265,7 +268,7 @@ const citaYaPaso = (cita) => {
                 type="checkbox"
                 :value="nombre"
                 v-model="formulario.servicio"
-                v-on:change="actualizarValor"
+                v-on:change="actualizarValor(nombre)"
               >
               {{ nombre }} — {{ formatoPesos(precio) }}
             </label>
@@ -287,13 +290,11 @@ const citaYaPaso = (cita) => {
           <div>
             <p>Horario</p>
             <label for="fecha">Fecha: </label>
-            <input type="date" id="fecha" v-model="formulario.fecha" :max="fechaMaximaPermitida"
-              v-on:change="validarFecha">
+            <input type="date" id="fecha" v-model="formulario.fecha" v-on:change="validarFecha">
             <p v-if="errorFecha" class="error-inline">{{ errorFecha }}</p>
 
             <label for="hora">Hora: </label>
-            <input type="time" id="hora" v-model="formulario.hora" min="08:00" max="19:00"
-              v-on:change="validarHora">
+            <input type="time" id="hora" v-model="formulario.hora" v-on:change="validarHora">
             <p v-if="errorHora" class="error-inline">{{ errorHora }}</p>
           </div>
 
@@ -399,7 +400,7 @@ const citaYaPaso = (cita) => {
               cita.metodoPago }}</p>
           </div>
           <template v-if="citaYaPaso(cita)">
-            <div class="calificacion">
+            <div class="calificacion" :class="{ bloqueada: cita.calificacion }">
               <span v-for="n in 5" :key="n" class="material-symbols-outlined estrella"
                 :class="{ activa: n <= (cita.calificacion || 0) }" v-on:click="calificarCita(index, n)">
                 star
@@ -434,5 +435,9 @@ const citaYaPaso = (cita) => {
   color: #d92d20;
   font-size: 0.85rem;
   margin: 2px 0 8px;
+}
+
+.calificacion.bloqueada .estrella {
+  cursor: default;
 }
 </style>
