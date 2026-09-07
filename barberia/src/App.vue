@@ -21,6 +21,10 @@ const indiceEditando = ref(null)
 const indiceAEliminar = ref(null)
 const mensajeError = ref('')
 
+// mensajes de error que se muestran como texto debajo de cada input (no en el modal genérico)
+const errorFecha = ref('')
+const errorHora = ref('')
+
 const formularioVacio = () => ({
   nombre: '',
   servicio: [],
@@ -54,6 +58,84 @@ const mostrarError = (mensaje) => {
   estadoModal.value = 'error'
 }
 
+// valida la fecha: obligatoria, no más de un mes adelante, no en el pasado (al crear)
+const validarFecha = () => {
+  errorFecha.value = ''
+
+  if (!formulario.value.fecha) {
+    errorFecha.value = 'Selecciona una fecha para la cita'
+    return false
+  }
+
+  const fechaSolo = new Date(`${formulario.value.fecha}T00:00:00`)
+  if (isNaN(fechaSolo.getTime())) {
+    errorFecha.value = 'La fecha ingresada no es válida'
+    return false
+  }
+
+  const fechaMaxima = new Date()
+  fechaMaxima.setMonth(fechaMaxima.getMonth() + 1)
+  if (fechaSolo > fechaMaxima) {
+    errorFecha.value = 'No se pueden agendar citas con más de un mes de anticipación'
+    return false
+  }
+
+  if (indiceEditando.value === null) {
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+    if (fechaSolo < hoy) {
+      errorFecha.value = 'No puedes agendar una cita en una fecha que ya pasó'
+      return false
+    }
+  }
+
+  return true
+}
+
+// valida la hora: obligatoria, dentro del horario de atención (8am-7pm), no en el pasado (al crear)
+const validarHora = () => {
+  errorHora.value = ''
+
+  if (!formulario.value.hora) {
+    errorHora.value = 'Selecciona una hora para la cita'
+    return false
+  }
+
+  const [horaCita, minutoCita] = formulario.value.hora.split(':').map(Number)
+  if (Number.isNaN(horaCita) || Number.isNaN(minutoCita)) {
+    errorHora.value = 'La hora ingresada no es válida'
+    return false
+  }
+
+  const minutosDesdeMedianoche = horaCita * 60 + minutoCita
+  const horaMinima = 8 * 60 // 8:00 am
+  const horaMaxima = 19 * 60 // 7:00 pm
+  if (minutosDesdeMedianoche < horaMinima || minutosDesdeMedianoche > horaMaxima) {
+    errorHora.value = 'El horario de atención es de 8:00 am a 7:00 pm'
+    return false
+  }
+
+  if (indiceEditando.value === null && formulario.value.fecha) {
+    const fechaHoraCita = new Date(`${formulario.value.fecha}T${formulario.value.hora}`)
+    if (!isNaN(fechaHoraCita.getTime()) && fechaHoraCita < new Date()) {
+      errorHora.value = 'No puedes agendar una cita en una hora que ya pasó'
+      return false
+    }
+  }
+
+  return true
+}
+
+// formatea un número como pesos colombianos: puntos de miles y signo $ (ej: $150.000)
+const formatoPesos = (valor) => {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(valor || 0)
+}
+
 const guardarCita = () => {
   // el nombre no puede quedar vacío ni ser solo espacios en blanco
   const nombreLimpio = formulario.value.nombre.trim()
@@ -73,44 +155,11 @@ const guardarCita = () => {
     return
   }
 
-  if (!formulario.value.fecha) {
-    mostrarError('Selecciona una fecha para la cita')
-    return
-  }
-
-  if (!formulario.value.hora) {
-    mostrarError('Selecciona una hora para la cita')
-    return
-  }
-
-  const fechaHoraCita = new Date(`${formulario.value.fecha}T${formulario.value.hora}`)
-  if (isNaN(fechaHoraCita.getTime())) {
-    mostrarError('La fecha u hora ingresada no es válida')
-    return
-  }
-
-  // al crear una cita nueva no debería poder agendarse en el pasado
-  // (al editar sí se permite, por si solo se está corrigiendo un dato de una cita ya pasada)
-  if (indiceEditando.value === null && fechaHoraCita < new Date()) {
-    mostrarError('No puedes agendar una cita en una fecha u hora que ya pasó')
-    return
-  }
-
-  // no se aceptan citas con más de un mes de anticipación desde hoy, el día que se está registrando
-  const fechaMaxima = new Date()
-  fechaMaxima.setMonth(fechaMaxima.getMonth() + 1)
-  if (fechaHoraCita > fechaMaxima) {
-    mostrarError('No se pueden agendar citas con más de un mes de anticipación')
-    return
-  }
-
-  // horario de atención: de 8:00 am a 7:00 pm
-  const [horaCita, minutoCita] = formulario.value.hora.split(':').map(Number)
-  const minutosDesdeMedianoche = horaCita * 60 + minutoCita
-  const horaMinima = 8 * 60 // 8:00 am
-  const horaMaxima = 19 * 60 // 7:00 pm
-  if (minutosDesdeMedianoche < horaMinima || minutosDesdeMedianoche > horaMaxima) {
-    mostrarError('El horario de atención es de 8:00 am a 7:00 pm')
+  // fecha y hora se validan aparte y muestran su error como texto debajo del input,
+  // no en el modal genérico
+  const fechaValida = validarFecha()
+  const horaValida = validarHora()
+  if (!fechaValida || !horaValida) {
     return
   }
 
@@ -138,6 +187,8 @@ const guardarCita = () => {
 const editarCita = (index) => {
   formulario.value = { ...listaCitas.value[index], servicio: [...listaCitas.value[index].servicio] }
   indiceEditando.value = index
+  errorFecha.value = ''
+  errorHora.value = ''
   estadoModal.value = 'formulario'
 }
 
@@ -160,6 +211,8 @@ const cancelarEliminacion = () => {
 const cerrarModal = () => {
   formulario.value = formularioVacio()
   indiceEditando.value = null
+  errorFecha.value = ''
+  errorHora.value = ''
   estadoModal.value = 'cerrado'
 }
 
@@ -214,7 +267,7 @@ const citaYaPaso = (cita) => {
                 v-model="formulario.servicio"
                 v-on:change="actualizarValor"
               >
-              {{ nombre }} — ${{ precio.toLocaleString() }}
+              {{ nombre }} — {{ formatoPesos(precio) }}
             </label>
           </div>
 
@@ -234,15 +287,19 @@ const citaYaPaso = (cita) => {
           <div>
             <p>Horario</p>
             <label for="fecha">Fecha: </label>
-            <input type="date" id="fecha" v-model="formulario.fecha" :max="fechaMaximaPermitida">
+            <input type="date" id="fecha" v-model="formulario.fecha" :max="fechaMaximaPermitida"
+              v-on:change="validarFecha">
+            <p v-if="errorFecha" class="error-inline">{{ errorFecha }}</p>
 
             <label for="hora">Hora: </label>
-            <input type="time" id="hora" v-model="formulario.hora" min="08:00" max="19:00">
+            <input type="time" id="hora" v-model="formulario.hora" min="08:00" max="19:00"
+              v-on:change="validarHora">
+            <p v-if="errorHora" class="error-inline">{{ errorHora }}</p>
           </div>
 
           <div>
             <p for="valor">Valor del servicio: </p>
-            <input type="number" step="0.01" placeholder="0.00" id="valor" v-model.number="formulario.valor" readonly />
+            <input type="text" placeholder="$0" id="valor" :value="formatoPesos(formulario.valor)" readonly />
 
             <div class="grup-pago">
               <p>Método de pago</p>
@@ -298,7 +355,7 @@ const citaYaPaso = (cita) => {
         <p><strong>Cliente:</strong> {{ formulario.nombre }}</p>
         <p><strong>Servicio:</strong> {{ formulario.servicio.join(', ') }}</p>
         <p><strong>Atendido por:</strong> {{ formulario.atencion }}</p>
-        <p><strong>Total:</strong> ${{ formulario.valor.toLocaleString() }} ({{ formulario.metodoPago }})</p>
+        <p><strong>Total:</strong> {{ formatoPesos(formulario.valor) }} ({{ formulario.metodoPago }})</p>
 
         <div class="acciones">
           <button v-on:click="cerrarModal">Finalizar</button>
@@ -338,7 +395,7 @@ const citaYaPaso = (cita) => {
           <div class="card-info">
             <p><span class="material-symbols-outlined">content_cut</span> {{ cita.atencion }}</p>
             <p><span class="material-symbols-outlined">calendar_month</span> {{ cita.fecha }} · {{ cita.hora }}</p>
-            <p><span class="material-symbols-outlined">payments</span> ${{ cita.valor.toLocaleString() }} · {{
+            <p><span class="material-symbols-outlined">payments</span> {{ formatoPesos(cita.valor) }} · {{
               cita.metodoPago }}</p>
           </div>
           <template v-if="citaYaPaso(cita)">
@@ -373,5 +430,9 @@ const citaYaPaso = (cita) => {
 </template>
 
 <style scoped>
-
+.error-inline {
+  color: #d92d20;
+  font-size: 0.85rem;
+  margin: 2px 0 8px;
+}
 </style>
