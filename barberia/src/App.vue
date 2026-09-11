@@ -233,6 +233,12 @@ const actualizarObservaciones = (index, texto) => {
   listaCitas.value[index].observaciones = texto
 }
 
+// una cita queda "cerrada" (reseñada) cuando ya tiene calificación Y un comentario
+// escrito; a partir de ahí ya no se puede editar ni eliminar desde la tarjeta
+const reseñaCompleta = (cita) => {
+  return Boolean(cita.calificacion) && Boolean(cita.observaciones && cita.observaciones.trim())
+}
+
 const ahora = ref(new Date())
 
 setInterval(() => {
@@ -416,7 +422,7 @@ const citaYaPaso = (cita) => {
             <span class="material-symbols-outlined">schedule</span>
             Disponible para calificar después de {{ cita.fecha }} {{ cita.hora }}
           </p>
-          <div class="card-acciones">
+          <div class="card-acciones" v-if="!reseñaCompleta(cita)">
             <button type="button" class="btn-editar" v-on:click="editarCita(index)">
               <span class="material-symbols-outlined">edit</span> Editar
             </button>
