@@ -233,6 +233,12 @@ const actualizarObservaciones = (index, texto) => {
   listaCitas.value[index].observaciones = texto
 }
 
+// solo se puede confirmar el pago cuando la reseña ya está completa
+// y el estado sigue en pendiente
+const confirmarPago = (index) => {
+  listaCitas.value[index].estadoPago = 'pagado'
+}
+
 // una cita queda "cerrada" (reseñada) cuando ya tiene calificación Y un comentario
 // escrito; a partir de ahí ya no se puede editar ni eliminar desde la tarjeta
 const reseñaCompleta = (cita) => {
@@ -428,6 +434,12 @@ const citaYaPaso = (cita) => {
             </button>
             <button type="button" class="btn-eliminar" v-on:click="eliminarCita(index)">
               <span class="material-symbols-outlined">delete</span> Eliminar
+            </button>
+          </div>
+
+          <div class="card-acciones" v-else-if="cita.estadoPago === 'pendiente'">
+            <button type="button" class="btn-confirmar-pago" v-on:click="confirmarPago(index)">
+              <span class="material-symbols-outlined">check_circle</span> Confirmar pago
             </button>
           </div>
         </div>
